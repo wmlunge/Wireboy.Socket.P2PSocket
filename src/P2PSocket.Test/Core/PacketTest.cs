@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using P2PSocket.Core.Extends;
 using P2PSocket.Core.Models;
+using P2PSocket.Core.Utils;
 using P2PSocket.Server;
 using P2PSocket.Server.Utils;
 using System;
@@ -26,7 +27,7 @@ namespace P2PSocket.Test.Core
             {
                 if (ReceivePacket.ParseData(ref data))
                 {
-                    string str = ReceivePacket.GetBytes().ToStringUnicode();
+                    string str = ReceivePacket.Data.ToStringUnicode();
                     Console.WriteLine(str);
                     Assert.AreEqual("这是一条测试数据", str);
                     ReceivePacket = new ReceivePacket();
@@ -43,13 +44,13 @@ namespace P2PSocket.Test.Core
         {
             CoreModule coreModule = new CoreModule();
             coreModule.InitCommandList();
-            Assert.AreNotEqual(Global.CommandDict.Count, 0);
+            Assert.AreNotEqual(EasyInject.Get<AppCenter>().CommandDict.Count, 0);
         }
         [TestMethod]
         public void TestConfig_LoadFile()
         {
-            ConfigUtils.LoadFromFile();
-            Assert.AreNotEqual(Global.PortMapList.Count, 0);
+            AppConfig config = EasyInject.Get<IConfig>().LoadFromFile() as AppConfig;
+            Assert.AreNotEqual(config.PortMapList.Count, 0);
         }
         [TestMethod]
         public void TestServerStart()

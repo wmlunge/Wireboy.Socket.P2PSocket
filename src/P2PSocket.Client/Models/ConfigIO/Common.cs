@@ -6,6 +6,7 @@ using System.Text;
 using System.Linq;
 using P2PSocket.Core.Utils;
 using P2PSocket.Client.Utils;
+using P2PSocket.Core.Enums;
 
 namespace P2PSocket.Client.Models.ConfigIO
 {
@@ -14,8 +15,10 @@ namespace P2PSocket.Client.Models.ConfigIO
     {
         public List<LogInfo> MessageList = new List<LogInfo>();
         private Dictionary<string, MethodInfo> MethodDic = new Dictionary<string, MethodInfo>();
-        public Common()
+        AppConfig config = null;
+        public Common(AppConfig config)
         {
+            this.config = config;
             var methods = GetType().GetMethods().Where(t => t.GetCustomAttribute<ConfigMethodAttr>() != null);
             foreach (MethodInfo method in methods)
             {
@@ -31,27 +34,29 @@ namespace P2PSocket.Client.Models.ConfigIO
             }
         }
 
-        public void ReadConfig(string text)
+        public object ReadConfig(string text)
         {
             int start = text.IndexOf('=');
             if (start > 0 && start < text.Length - 1)
             {
-                string name = text.Substring(0, start).Trim().ToUpper();
-                if (MethodDic.ContainsKey(name))
+                string key = text.Substring(0, start).Trim().ToUpper();
+                if (MethodDic.ContainsKey(key))
                 {
                     try
                     {
-                        MethodDic[name.ToUpper()].Invoke(this, new object[] { text.Substring(start + 1).Trim() });
-                        LogDebug($"【Common配置项】读取成功：{name}");
+                        string value = text.Substring(start + 1).Trim();
+                        MethodDic[key.ToUpper()].Invoke(this, new object[] { value });
+                        LogDebug($"【Common配置项】读取成功：{key}");
+                        return (key, value);
                     }
                     catch (Exception ex)
                     {
                         LogWarning($"【Common配置项】读取失败：{ex.Message}");
                     }
-                    return;
                 }
             }
             LogWarning($"【Common配置项】未识别的配置项:\"{text}\"{Environment.NewLine}请参考https://github.com/bobowire/Wireboy.Socket.P2PSocket/wiki");
+            return ("", "");
         }
 
         protected void LogDebug(string msg)
@@ -75,9 +80,9 @@ namespace P2PSocket.Client.Models.ConfigIO
             string[] ipStr = data.Split(':');
             if (ipStr.Length == 2)
             {
-                Global.ServerAddress = ipStr[0];
-                Global.ServerPort = Convert.ToInt32(ipStr[1]);
-                P2PTcpClient.Proxy.Address.Add(Global.ServerAddress);
+                config.ServerAddress = ipStr[0];
+                config.ServerPort = Convert.ToInt32(ipStr[1]);
+                P2PTcpClient.Proxy.Address.Add(config.ServerAddress);
             }
             else
             {
@@ -87,12 +92,12 @@ namespace P2PSocket.Client.Models.ConfigIO
         [ConfigMethodAttr("ClientName")]
         public void Read02(string data)
         {
-            Global.ClientName = data;
+            config.ClientName = data;
         }
         [ConfigMethodAttr("AuthCode")]
         public void Read03(string data)
         {
-            Global.AuthCode = data;
+            config.AuthCode = data;
         }
         [ConfigMethodAttr("AllowPort")]
         public void Read04(string data)
@@ -101,7 +106,7 @@ namespace P2PSocket.Client.Models.ConfigIO
             foreach (string portStr in portList)
             {
                 AllowPortItem portItem = new AllowPortItem(portStr);
-                Global.AllowPortList.Add(portItem);
+                config.AllowPortList.Add(portItem);
             }
         }
         [ConfigMethodAttr("BlackList")]
@@ -110,7 +115,7 @@ namespace P2PSocket.Client.Models.ConfigIO
             string[] blackList = data.Split(',');
             foreach (string value in blackList)
             {
-                Global.BlackClients.Add(value);
+                config.BlackClients.Add(value);
             }
         }
         [ConfigMethodAttr("LogLevel")]
@@ -119,12 +124,14 @@ namespace P2PSocket.Client.Models.ConfigIO
             string levelName = data.ToLower();
             switch (levelName)
             {
-                case "debug": LogUtils.Instance.LogLevel = Core.Utils.LogLevel.Debug; break;
-                case "error": LogUtils.Instance.LogLevel = Core.Utils.LogLevel.Error; break;
-                case "info": LogUtils.Instance.LogLevel = Core.Utils.LogLevel.Info; break;
-                case "none": LogUtils.Instance.LogLevel = Core.Utils.LogLevel.None; break;
-                case "warning": LogUtils.Instance.LogLevel = Core.Utils.LogLevel.Warning; break;
-                default: throw new ArgumentException("LogLevel格式错误，请参考https://github.com/bobowire/Wireboy.Socket.P2PSocket/wiki"); 
+                case "debug": config.LogLevel = LogLevel.Debug; break;
+                case "error": config.LogLevel = LogLevel.Error; break;
+                case "info": config.LogLevel = LogLevel.Info; break;
+                case "none": config.LogLevel = LogLevel.None; break;
+                case "warning": config.LogLevel = LogLevel.Warning; break;
+                case "fatal": config.LogLevel = LogLevel.Fatal; break;
+                case "trace": config.LogLevel = LogLevel.Trace; break;
+                default: throw new ArgumentException("LogLevel格式错误，请参考https://github.com/bobowire/Wireboy.Socket.P2PSocket/wiki");
             }
         }
         [ConfigMethodAttr("Proxy_Ip")]
@@ -151,6 +158,16 @@ namespace P2PSocket.Client.Models.ConfigIO
         public void Read09(string data)
         {
             P2PTcpClient.Proxy.Password = data;
+        }
+
+        public string GetItemString<T>(T item)
+        {
+            (string, string)? cItem;
+            if ((cItem = item as (string, string)?) != null)
+            {
+                return $"{cItem.Value.Item1}={cItem.Value.Item2}";
+            }
+            throw new NotSupportedException($"不支持的类型{item.GetType().FullName}");
         }
     }
 }

@@ -16,11 +16,11 @@ namespace P2PSocket.Server.Models.Receive
     {
         public Packet_0x0212() : base()
         {
-            CommandType = P2PCommandType.P2P0x0212;
         }
 
         public override bool ParseData(ref byte[] data)
         {
+            CommandType = P2PCommandType.P2P0x0212;
             try
             {
                 LogUtils.Debug($"Port长度{data.Length}");
@@ -29,7 +29,7 @@ namespace P2PSocket.Server.Models.Receive
                 BinaryUtils.Write(writer, true);
                 BinaryUtils.Write(writer, data);
                 writer.Close();
-                this.DataBuffer = ((MemoryStream)writer.BaseStream).ToArray();
+                this.Data = ((MemoryStream)writer.BaseStream).ToArray();
                 data = new byte[0];
             }
             catch (Exception ex)

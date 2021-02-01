@@ -9,7 +9,7 @@ namespace P2PSocket.Core
         /// <summary>
         ///     数据接收缓存区大小
         /// </summary>
-        public const int P2PSocketBufferSize = 10240;
+        public const int P2PSocketBufferSize = 1470;
         /// <summary>
         ///     固定的包头数据
         /// </summary>
@@ -43,6 +43,10 @@ namespace P2PSocket.Core
         ///     客户端信息
         /// </summary>
         Login0x0103 = 0x0103,
+        /// <summary>
+        ///     匿名认证，通过mac获取ClientName
+        /// </summary>
+        Login0x0104 = 0x0104,
         /// <summary>
         ///     P2P端口映射请求
         /// </summary>

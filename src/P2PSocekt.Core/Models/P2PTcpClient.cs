@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Linq;
 using System.Text.RegularExpressions;
+using P2PSocket.Core.Utils;
 
 namespace P2PSocket.Core.Models
 {
@@ -27,6 +28,13 @@ namespace P2PSocket.Core.Models
             m_localEndPoint = socket.LocalEndPoint.ToString();
             this.NoDelay = true;
         }
+
+        public void UpdateEndPoint()
+        {
+            m_remoteEndPoint = Client.RemoteEndPoint.ToString();
+            m_localEndPoint = Client.LocalEndPoint.ToString();
+        }
+
         public P2PTcpClient(string hostname, int port) : base()
         {
             this.NoDelay = true;
@@ -238,6 +246,16 @@ namespace P2PSocket.Core.Models
             return client;
         }
 
+        public void SafeClose()
+        {
+            if (this.Connected)
+            {
+                EasyInject.Get<ILogger>().WriteLine(new LogInfo() { LogLevel = Enums.LogLevel.Trace, Msg = $"关闭tcp连接{this.RemoteEndPoint}" });
+                this.GetStream().Close(3000);
+                this.Close();
+            }
+        }
+
         public string Token { set; get; } = Guid.NewGuid().ToString();
         public P2PTcpClient ToClient { set; get; }
         /// <summary>
@@ -251,8 +269,11 @@ namespace P2PSocket.Core.Models
 
         public DateTime LastHeartTime { set; get; } = DateTime.Now;
 
-        public bool IsDisConnected { get => LastHeartTime.AddSeconds(15) <= DateTime.Now; }
+        public bool IsDisConnected { get => LastHeartTime.AddSeconds(10) <= DateTime.Now; }
 
+        public bool IsSpeedLimit { set; get; } = false;
+
+        public int P2PLocalPort { set; get; } = -1;
         String m_remoteEndPoint = "";
         String m_localEndPoint = "";
         public String RemoteEndPoint
